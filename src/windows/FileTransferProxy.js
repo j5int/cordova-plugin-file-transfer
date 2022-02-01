@@ -111,10 +111,12 @@ function doUpload (upload, uploadId, filePath, server, successCallback, errorCal
                         resolve(new FTErr(FTErr.CONNECTION_ERR, source, server, null, null, error));
                     } else {
                         var reader = new Windows.Storage.Streams.DataReader(upload.getResultStreamAt(0));
-                        reader.loadAsync(upload.progress.bytesReceived).then(function (size) {
+                        reader.loadAsync(upload.progress.bytesReceived).done(function (size) {
                             var responseText = reader.readString(size);
                             resolve(new FTErr(FTErr.FILE_NOT_FOUND_ERR, source, server, response.statusCode, responseText, error));
                             reader.close();
+                        }, function (err) {
+                            resolve(new FTErr(FTErr.FILE_NOT_FOUND_ERR, source, server, response.statusCode, null, err));
                         });
                     }
                 }
