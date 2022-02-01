@@ -21,12 +21,10 @@
 # Release Notes
 
 ### 1.7.1-j5int-1 (Feb 01, 2022)
-
 * Handle the case where a download fails due to an antivirus blocking the file access
 * Ensure we handle the case when reading the error response fails for both upload/download
 * Ensure we handle the case when there is an error response but no content for both upload/download
 
-                                        
 ### 1.7.1 (Jan 24, 2018)
 * [CB-13749](https://issues.apache.org/jira/browse/CB-13749) Add build-tools-26.0.2 to travis
 
