@@ -20,7 +20,7 @@
 -->
 # Release Notes
 
-### 1.7.1-j5int-1 (Feb 01, 2022)
+### 1.7.1-j5.1 (Feb 01, 2022)
 * Handle the case where a download fails due to an antivirus blocking the file access
 * Ensure we handle the case when reading the error response fails for both upload/download
 * Ensure we handle the case when there is an error response but no content for both upload/download
