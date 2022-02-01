@@ -108,7 +108,7 @@ function doUpload (upload, uploadId, filePath, server, successCallback, errorCal
                     // in the other way, try to get response property
                     var response = upload.getResponseInformation();
                     if (!response) {
-                        resolve(new FTErr(FTErr.CONNECTION_ERR, source, server));
+                        resolve(new FTErr(FTErr.CONNECTION_ERR, source, server, null, null, error));
                     } else {
                         var reader = new Windows.Storage.Streams.DataReader(upload.getResultStreamAt(0));
                         reader.loadAsync(upload.progress.bytesReceived).then(function (size) {
