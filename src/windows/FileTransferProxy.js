@@ -504,9 +504,11 @@ exec(win, fail, 'FileTransfer', 'upload',
                                     return;
                                 }
                                 var reader = new Windows.Storage.Streams.DataReader(download.getResultStreamAt(0));
-                                reader.loadAsync(download.progress.bytesReceived).then(function (bytesLoaded) {
+                                reader.loadAsync(download.progress.bytesReceived).done(function (bytesLoaded) {
                                     var payload = reader.readString(bytesLoaded);
                                     resolve(new FTErr(FTErr.FILE_NOT_FOUND_ERR, source, target, response.statusCode, payload, error));
+                                }, function (err) {
+                                    resolve(new FTErr(FTErr.CONNECTION_ERR, source, target, response.statusCode, null, err));
                                 });
                             }
                         }
