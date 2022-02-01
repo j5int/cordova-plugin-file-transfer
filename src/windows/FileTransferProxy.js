@@ -497,7 +497,7 @@ exec(win, fail, 'FileTransfer', 'upload',
                             // in the other way, try to get response property
                             var response = download.getResponseInformation();
                             if (!response) {
-                                resolve(new FTErr(FTErr.CONNECTION_ERR, source, target));
+                                resolve(new FTErr(FTErr.CONNECTION_ERR, source, target, null, null, error));
                             } else {
                                 var reader = new Windows.Storage.Streams.DataReader(download.getResultStreamAt(0));
                                 reader.loadAsync(download.progress.bytesReceived).then(function (bytesLoaded) {
