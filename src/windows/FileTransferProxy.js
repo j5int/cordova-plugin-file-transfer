@@ -108,13 +108,15 @@ function doUpload (upload, uploadId, filePath, server, successCallback, errorCal
                     // in the other way, try to get response property
                     var response = upload.getResponseInformation();
                     if (!response) {
-                        resolve(new FTErr(FTErr.CONNECTION_ERR, source, server));
+                        resolve(new FTErr(FTErr.CONNECTION_ERR, source, server, null, null, error));
                     } else {
                         var reader = new Windows.Storage.Streams.DataReader(upload.getResultStreamAt(0));
                         reader.loadAsync(upload.progress.bytesReceived).then(function (size) {
                             var responseText = reader.readString(size);
                             resolve(new FTErr(FTErr.FILE_NOT_FOUND_ERR, source, server, response.statusCode, responseText, error));
                             reader.close();
+                        }, function (err) {
+                            resolve(new FTErr(FTErr.FILE_NOT_FOUND_ERR, source, server, response.statusCode, null, err));
                         });
                     }
                 }
@@ -497,12 +499,18 @@ exec(win, fail, 'FileTransfer', 'upload',
                             // in the other way, try to get response property
                             var response = download.getResponseInformation();
                             if (!response) {
-                                resolve(new FTErr(FTErr.CONNECTION_ERR, source, target));
+                                resolve(new FTErr(FTErr.CONNECTION_ERR, source, target, null, null, error));
                             } else {
+                                if (download.progress.bytesReceived === 0) {
+                                    resolve(new FTErr(FTErr.FILE_NOT_FOUND_ERR, source, target, response.statusCode, null, error));
+                                    return;
+                                }
                                 var reader = new Windows.Storage.Streams.DataReader(download.getResultStreamAt(0));
                                 reader.loadAsync(download.progress.bytesReceived).then(function (bytesLoaded) {
                                     var payload = reader.readString(bytesLoaded);
                                     resolve(new FTErr(FTErr.FILE_NOT_FOUND_ERR, source, target, response.statusCode, payload, error));
+                                }, function (err) {
+                                    resolve(new FTErr(FTErr.CONNECTION_ERR, source, target, response.statusCode, null, err));
                                 });
                             }
                         }
