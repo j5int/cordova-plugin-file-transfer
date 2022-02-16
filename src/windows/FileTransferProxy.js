@@ -59,6 +59,7 @@ function alreadyCancelled(opId) {
 }
 
 function doUpload (upload, uploadId, filePath, server, successCallback, errorCallback) {
+    console.log(`FileTransferProxy (upload/doUpload) ${filePath}`)
     if (alreadyCancelled(uploadId)) {
         errorCallback(new FTErr(FTErr.ABORT_ERR, nativePathToCordova(filePath), server));
         return;
@@ -68,6 +69,7 @@ function doUpload (upload, uploadId, filePath, server, successCallback, errorCal
     var uploadOperation = upload.startAsync();
     fileTransferOps[uploadId].promise = uploadOperation;
 
+    console.log(`FileTransferProxy (upload/doUpload) ${filePath} run uploadOperation`)
     uploadOperation.then(
         function (result) {
             // Update TransferOperation object with new state, delete promise property
@@ -78,15 +80,19 @@ function doUpload (upload, uploadId, filePath, server, successCallback, errorCal
                 currentUploadOp.promise = null;
             }
 
+            console.log(`FileTransferProxy (upload/doUpload) ${filePath} get server response`)
             var response = result.getResponseInformation();
             var ftResult = new FileUploadResult(result.progress.bytesSent, response.statusCode, '');
 
+
             // if server's response doesn't contain any data, then resolve operation now
             if (result.progress.bytesReceived === 0) {
+                console.log(`FileTransferProxy (upload/doUpload) ${filePath} no server response, upload complete`)
                 successCallback(ftResult);
                 return;
             }
 
+            console.log(`FileTransferProxy (upload/doUpload) ${filePath} read server response with data reader`)
             // otherwise create a data reader, attached to response stream to get server's response
             var reader = new Windows.Storage.Streams.DataReader(result.getResultStreamAt(0));
             reader.loadAsync(result.progress.bytesReceived).then(function (size) {
@@ -97,6 +103,7 @@ function doUpload (upload, uploadId, filePath, server, successCallback, errorCal
         },
         function (error) {
             var source = nativePathToCordova(filePath);
+            console.log(`FileTransferProxy (upload/doUpload) ${filePath} error occurred during upload ${source} ${error.message}`)
 
             // Handle download error here.
             // Wrap this routines into promise due to some async methods
@@ -105,17 +112,22 @@ function doUpload (upload, uploadId, filePath, server, successCallback, errorCal
                     // If download was cancelled, message property will be specified
                     resolve(new FTErr(FTErr.ABORT_ERR, source, server, null, null, error));
                 } else {
+                    console.log(`FileTransferProxy (upload/doUpload) ${filePath} error occurred during upload ${source}, try to get server response`)
                     // in the other way, try to get response property
                     var response = upload.getResponseInformation();
                     if (!response) {
+                        console.log(`FileTransferProxy (upload/doUpload) ${filePath} error occurred during upload ${source}, no server response`)
                         resolve(new FTErr(FTErr.CONNECTION_ERR, source, server, null, null, error));
                     } else {
+                        console.log(`FileTransferProxy (upload/doUpload) ${filePath} error occurred during upload ${source} , read server response`)
                         var reader = new Windows.Storage.Streams.DataReader(upload.getResultStreamAt(0));
                         reader.loadAsync(upload.progress.bytesReceived).then(function (size) {
                             var responseText = reader.readString(size);
+                            console.log(`FileTransferProxy (upload/doUpload) ${filePath} error occurred during upload ${source}, server response received`)
                             resolve(new FTErr(FTErr.FILE_NOT_FOUND_ERR, source, server, response.statusCode, responseText, error));
                             reader.close();
                         }, function (err) {
+                            console.log(`FileTransferProxy (upload/doUpload) ${filePath} error occurred during upload ${source}, server response read failed ${err.message}`)
                             resolve(new FTErr(FTErr.FILE_NOT_FOUND_ERR, source, server, response.statusCode, null, err));
                         });
                     }
@@ -193,8 +205,11 @@ exec(win, fail, 'FileTransfer', 'upload',
             return;
         }
 
+        console.log(`FileTransferProxy (upload): filePath ${filePath} server ${server}`)
+
         if (filePath.indexOf("data:") === 0 && filePath.indexOf("base64") !== -1) {
-            // First a DataWriter object is created, backed by an in-memory stream where 
+            console.log(`FileTransferProxy (upload) ${filePath}: is data or base64`)
+            // First a DataWriter object is created, backed by an in-memory stream where
             // the data will be stored.
             var writer = Windows.Storage.Streams.DataWriter(new Windows.Storage.Streams.InMemoryRandomAccessStream());
             writer.unicodeEncoding = Windows.Storage.Streams.UnicodeEncoding.utf8;
@@ -240,6 +255,7 @@ exec(win, fail, 'FileTransfer', 'upload',
 
                 var bound = LINE_END + LINE_START + BOUNDARY + LINE_START + LINE_END;
 
+                console.log(`FileTransferProxy (upload) ${filePath}: is multipart`)
                 uploader.setRequestHeader("Content-Type", "multipart/form-data; boundary=" + BOUNDARY);
                 writer.writeString(multipartParams);
                 writer.writeString(multipartFile);
@@ -253,6 +269,7 @@ exec(win, fail, 'FileTransfer', 'upload',
 
             // The call to store async sends the actual contents of the writer 
             // to the backing stream.
+            console.log(`FileTransferProxy (upload) ${filePath}: call writer.storeAsync`)
             writer.storeAsync().then(function () {
                 // For the in-memory stream implementation we are using, the flushAsync call 
                 // is superfluous, but other types of streams may require it.
@@ -292,6 +309,7 @@ exec(win, fail, 'FileTransfer', 'upload',
                     return;
                 }
 
+                console.log(`FileTransferProxy (upload) ${filePath}: createUploadOperation`)
                 createUploadOperation.then(
                     function (upload) {
                         doUpload(upload, uploadId, filePath, server, successCallback, errorCallback);
@@ -403,6 +421,7 @@ exec(win, fail, 'FileTransfer', 'upload',
         var target = options[1];
         var downloadId = options[3];
         var headers = options[4] || {};
+        console.log(`FileTransferProxy (download) ${source}`)
 
         if (!target) {
             errorCallback(new FTErr(FTErr.FILE_NOT_FOUND_ERR));
@@ -436,6 +455,7 @@ exec(win, fail, 'FileTransfer', 'upload',
         fileTransferOps[downloadId] = new FileTransferOperation(FileTransferOperation.PENDING, null);
 
         var downloadCallback = function(storageFolder) {
+            console.log(`FileTransferProxy (download) ${source}: create temp file ${tempFileName}`)
             storageFolder.createFileAsync(tempFileName, Windows.Storage.CreationCollisionOption.replaceExisting).then(function (storageFile) {
 
                 if (alreadyCancelled(downloadId)) {
@@ -461,12 +481,13 @@ exec(win, fail, 'FileTransfer', 'upload',
                     return;
                 }
 
+                console.log(`FileTransferProxy (download) ${source}: start download`)
                 var downloadOperation = download.startAsync();
                 // update internal TransferOperation object with newly created promise
                 fileTransferOps[downloadId].promise = downloadOperation;
 
                 downloadOperation.then(function () {
-
+                    console.log(`FileTransferProxy (download) ${source}: download complete`)
                     // Update TransferOperation object with new state, delete promise property
                     // since it is not actual anymore
                     var currentDownloadOp = fileTransferOps[downloadId];
@@ -475,11 +496,13 @@ exec(win, fail, 'FileTransfer', 'upload',
                         currentDownloadOp.promise = null;
                     }
 
+                    console.log(`FileTransferProxy (download) ${source}: move temp file ${tempFileName} to ${fileName}`)
                     storageFile.renameAsync(fileName, Windows.Storage.CreationCollisionOption.replaceExisting).done(function () {
                         var nativeURI = storageFile.path.replace(appData.localFolder.path, 'ms-appdata:///local')
                         .replace(appData.temporaryFolder.path, 'ms-appdata:///temp')
                         .replace(/\\/g, '/');
 
+                        console.log(`FileTransferProxy (download) ${source}: moved temp file ${tempFileName} to ${fileName} successful`)
                         // Passing null as error callback here because downloaded file should exist in any case
                         // otherwise the error callback will be hit during file creation in another place
                         FileProxy.resolveLocalFileSystemURI(successCallback, null, [nativeURI]);
@@ -487,29 +510,36 @@ exec(win, fail, 'FileTransfer', 'upload',
                         errorCallback(new FTErr(FTErr.FILE_NOT_FOUND_ERR, source, target, null, null, error));
                     });
                 }, function(error) {
-
+                    console.log(`FileTransferProxy (download) ${source}: download failed ${error.message}`)
                     var getTransferError = new WinJS.Promise(function (resolve) {
                         // Handle download error here. If download was cancelled,
                         // message property will be specified
                         if (error.message === 'Canceled') {
                             resolve(new FTErr(FTErr.ABORT_ERR, source, target, null, null, error));
                         } else if (error && error.number === HTTP_E_STATUS_NOT_MODIFIED) {
+                            console.log(`FileTransferProxy (download) ${source}: download failed, status was 304 the file did not change`)
                             resolve(new FTErr(FTErr.NOT_MODIFIED_ERR, source, target, 304, null, error));
                         } else {
+                            console.log(`FileTransferProxy (download) ${source}: download failed, get response information`)
                             // in the other way, try to get response property
                             var response = download.getResponseInformation();
                             if (!response) {
+                                console.log(`FileTransferProxy (download) ${source}: download failed, no response return error`)
                                 resolve(new FTErr(FTErr.CONNECTION_ERR, source, target, null, null, error));
                             } else {
+                                console.log(`FileTransferProxy (download) ${source}: download failed, response but no data return error`)
                                 if (download.progress.bytesReceived === 0) {
                                     resolve(new FTErr(FTErr.FILE_NOT_FOUND_ERR, source, target, response.statusCode, null, error));
                                     return;
                                 }
+                                console.log(`FileTransferProxy (download) ${source}: download failed, read server response`)
                                 var reader = new Windows.Storage.Streams.DataReader(download.getResultStreamAt(0));
                                 reader.loadAsync(download.progress.bytesReceived).then(function (bytesLoaded) {
                                     var payload = reader.readString(bytesLoaded);
+                                    console.log(`FileTransferProxy (download) ${source}: download failed, read server response successful, return`)
                                     resolve(new FTErr(FTErr.FILE_NOT_FOUND_ERR, source, target, response.statusCode, payload, error));
                                 }, function (err) {
+                                    console.log(`FileTransferProxy (download) ${source}: download failed, read server response failed with error ${err.message}`)
                                     resolve(new FTErr(FTErr.CONNECTION_ERR, source, target, response.statusCode, null, err));
                                 });
                             }
@@ -526,7 +556,12 @@ exec(win, fail, 'FileTransfer', 'upload',
                         }
 
                         // Cleanup, remove incompleted file
+                        console.log(`FileTransferProxy (download) ${source}: download failed, clean up incompleted files`)
                         storageFile.deleteAsync().then(function() {
+                            console.log(`FileTransferProxy (download) ${source}: download failed, cleaned up incompleted files, return`)
+                            errorCallback(fileTransferError);
+                        }, function (err) {
+                            console.log(`FileTransferProxy (download) ${source}: download failed, cleaned up incompleted files failed ${err.message}, return`)
                             errorCallback(fileTransferError);
                         });
                     });
@@ -553,9 +588,11 @@ exec(win, fail, 'FileTransfer', 'upload',
             errorCallback(new FTErr(FTErr.FILE_NOT_FOUND_ERR, source, target, null, null, error));
         };
 
+        console.log(`FileTransferProxy (download) ${source}: get the storage folder`)
         Windows.Storage.StorageFolder.getFolderFromPathAsync(path).then(downloadCallback, function (error) {
             // Handle non-existent directory
             if (error.number === -2147024894) {
+                console.log(`FileTransferProxy (download) ${source}: could not find storage folder, try parent folder`)
                 var parent = path.substr(0, path.lastIndexOf('\\')),
                     folderNameToCreate = path.substr(path.lastIndexOf('\\') + 1);
 
