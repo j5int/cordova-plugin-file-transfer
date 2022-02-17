@@ -97,6 +97,7 @@ function doUpload (upload, uploadId, filePath, server, successCallback, errorCal
             var reader = new Windows.Storage.Streams.DataReader(result.getResultStreamAt(0));
             reader.loadAsync(result.progress.bytesReceived).then(function (size) {
                 ftResult.response = reader.readString(size);
+                console.log(`FileTransferProxy (upload/doUpload) ${filePath} Did read server response, return`)
                 successCallback(ftResult);
                 reader.close();
             });
@@ -527,8 +528,8 @@ exec(win, fail, 'FileTransfer', 'upload',
                                 console.log(`FileTransferProxy (download) ${source}: download failed, no response return error`)
                                 resolve(new FTErr(FTErr.CONNECTION_ERR, source, target, null, null, error));
                             } else {
-                                console.log(`FileTransferProxy (download) ${source}: download failed, response but no data return error`)
                                 if (download.progress.bytesReceived === 0) {
+                                    console.log(`FileTransferProxy (download) ${source}: download failed, response but no data return error`)
                                     resolve(new FTErr(FTErr.FILE_NOT_FOUND_ERR, source, target, response.statusCode, null, error));
                                     return;
                                 }
