@@ -430,7 +430,8 @@ static CFIndex WriteDataToStream(NSData* data, CFWriteStreamRef stream)
          * Check here to see if it looks like the user passed in a raw filesystem path. (Perhaps they had the path saved, and were previously using it with the old version of File). If so, normalize it by removing empty path segments, and check with File to see if any of the installed filesystems will handle it. If so, then we will end up with a filesystem url to use for the remainder of this operation.
          */
         target = [target stringByReplacingOccurrencesOfString:@"//" withString:@"/"];
-        targetURL = [[self.commandDelegate getCommandInstance:@"File"] fileSystemURLforLocalPath:target].url;
+        CDVFile* filePlugin = (CDVFile*)[self.commandDelegate getCommandInstance:@"File"];
+        targetURL = [filePlugin fileSystemURLforLocalPath:target].url;
     } else {
         targetURL = [NSURL URLWithString:target];
 
