@@ -328,7 +328,8 @@ static CFIndex WriteDataToStream(NSData* data, CFWriteStreamRef stream)
     if (sourceURL) {
         // Try to get a CDVFileSystem which will handle this file.
         // This requires talking to the current CDVFile plugin.
-        fs = [[self.commandDelegate getCommandInstance:@"File"] filesystemForURL:sourceURL];
+        CDVFile* filePlugin = (CDVFile*)[self.commandDelegate getCommandInstance:@"File"];
+        fs = [filePlugin filesystemForURL:sourceURL];
     }
     if (fs) {
         __weak CDVFileTransfer* weakSelf = self;
